@@ -23,10 +23,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="it"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-gray-50 text-gray-900">
-        <header className="border-b bg-white px-6 py-4">
-          <h1 className="text-lg font-semibold">JSM Ops Dashboard</h1>
-          <p className="text-xs text-gray-500">Monitoraggio operativo — read-only sidecar</p>
+      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
+        <header className="border-b border-slate-200 bg-white px-6 py-4">
+          <h1 className="text-lg font-semibold tracking-tight">JSM Ops Dashboard</h1>
+          <p className="text-xs text-slate-500 mt-0.5">Monitoraggio operativo Jira Service Management</p>
         </header>
         <main className="flex-1 p-6">{children}</main>
       </body>
