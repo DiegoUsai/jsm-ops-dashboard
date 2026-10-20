@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   try {
     const sql = getDb();
-    const projectKey = process.env.JIRA_PROJECT_KEY ?? "SD";
+    const projectKey = process.env.JIRA_PROJECT_KEY ?? "AM00";
     let startAt = 0;
     let total = 1;
     let synced = 0;
