@@ -15,17 +15,15 @@ export async function GET(req: NextRequest) {
   try {
     const sql = getDb();
     const projectKey = process.env.JIRA_PROJECT_KEY ?? "AM00";
-    let startAt = 0;
-    let total = 1;
+    let nextPageToken: string | undefined;
     let synced = 0;
 
-    while (startAt < total) {
+    while (true) {
       const result = await searchJql(
         `project = ${projectKey} AND updated >= -1d ORDER BY updated DESC`,
-        startAt,
+        nextPageToken,
         100
       );
-      total = result.total;
 
       for (const issue of result.issues) {
         const f = issue.fields;
@@ -66,7 +64,8 @@ export async function GET(req: NextRequest) {
         synced++;
       }
 
-      startAt += result.issues.length;
+      if (result.isLast) break;
+      nextPageToken = result.nextPageToken;
     }
 
     // Compute daily team metrics
