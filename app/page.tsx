@@ -6,6 +6,7 @@ import { SlaTracker } from "@/components/SlaTracker";
 import { BacklogAging } from "@/components/BacklogAging";
 import { VolumeTrend } from "@/components/VolumeTrend";
 import { VipTickets } from "@/components/VipTickets";
+import { TeamMetricsTable } from "@/components/TeamMetrics";
 import type { DashboardData, HealthStatus } from "@/lib/types";
 
 const REFRESH_MS = 5 * 60_000;
@@ -68,6 +69,7 @@ export default function Dashboard() {
         ),
         backlogAging: metricsData.backlogAging ?? [],
         volumeTrend: metricsData.volumeTrend ?? [],
+        teamMetrics: metricsData.metrics ?? [],
         totalOpen,
         totalBreached,
         slaCompliancePercent,
@@ -139,6 +141,11 @@ export default function Dashboard() {
           <VipTickets tickets={data.vipOpen} />
         </section>
       </div>
+
+      <section>
+        <h2 className="text-sm font-medium text-slate-500 mb-3">Metriche per team</h2>
+        <TeamMetricsTable data={data.teamMetrics} />
+      </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section>

@@ -103,6 +103,11 @@ async function handleComment(event: Record<string, unknown>) {
     )
     ON CONFLICT (jira_comment_id) DO NOTHING
   `;
+
+  await sql`
+    UPDATE tickets SET first_response_at = ${comment.created as string}
+    WHERE id = ${ticketRows[0].id as number} AND first_response_at IS NULL
+  `;
 }
 
 function extractTeam(fields: Record<string, unknown>): string | null {

@@ -24,9 +24,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900">
-        <header className="border-b border-slate-200 bg-white px-6 py-4">
-          <h1 className="text-lg font-semibold tracking-tight">JSM Ops Dashboard</h1>
-          <p className="text-xs text-slate-500 mt-0.5">Monitoraggio operativo Jira Service Management</p>
+        <header className="border-b border-slate-200 bg-white px-6 py-4 flex items-center justify-between">
+          <div>
+            <a href="/" className="text-lg font-semibold tracking-tight hover:text-slate-700 transition-colors">JSM Ops Dashboard</a>
+            <p className="text-xs text-slate-500 mt-0.5">Monitoraggio operativo Jira Service Management</p>
+          </div>
+          <nav>
+            <a href="/vip" className="text-sm text-slate-500 hover:text-slate-800 transition-colors">Regole VIP</a>
+          </nav>
         </header>
         <main className="flex-1 p-6">{children}</main>
       </body>

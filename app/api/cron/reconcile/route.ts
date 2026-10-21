@@ -59,7 +59,8 @@ export async function GET(req: NextRequest) {
             priority = EXCLUDED.priority,
             is_vip = EXCLUDED.is_vip,
             updated_at = EXCLUDED.updated_at,
-            resolved_at = EXCLUDED.resolved_at
+            resolved_at = EXCLUDED.resolved_at,
+            assignee_team = COALESCE(tickets.assignee_team, EXCLUDED.assignee_team)
         `;
         synced++;
       }
@@ -68,23 +69,60 @@ export async function GET(req: NextRequest) {
       nextPageToken = result.nextPageToken;
     }
 
-    // Compute daily team metrics
+    // Backfill first_response_at from comments for tickets missing it
     await sql`
-      INSERT INTO team_metrics_daily (team_name, metric_date, tickets_opened, tickets_resolved, sla_breach_count, backlog_size)
-      SELECT
-        COALESCE(assignee_team, 'unassigned'),
-        CURRENT_DATE,
-        COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE),
-        COUNT(*) FILTER (WHERE resolved_at::date = CURRENT_DATE),
-        0,
-        COUNT(*) FILTER (WHERE status NOT IN ('Resolved', 'Closed', 'Done'))
-      FROM tickets
-      GROUP BY COALESCE(assignee_team, 'unassigned')
-      ON CONFLICT (team_name, metric_date) DO UPDATE SET
-        tickets_opened = EXCLUDED.tickets_opened,
-        tickets_resolved = EXCLUDED.tickets_resolved,
-        backlog_size = EXCLUDED.backlog_size
+      UPDATE tickets SET first_response_at = c.first_comment
+      FROM (
+        SELECT ticket_id, MIN(created_at) AS first_comment
+        FROM comments
+        GROUP BY ticket_id
+      ) c
+      WHERE tickets.id = c.ticket_id AND tickets.first_response_at IS NULL
     `;
+
+    // Breach counts per team from today's SLA snapshots
+    const breaches = await sql`
+      SELECT COALESCE(t.assignee_team, 'unassigned') AS team,
+             COUNT(DISTINCT s.ticket_id)::int AS cnt
+      FROM sla_snapshots s
+      JOIN tickets t ON t.id = s.ticket_id
+      WHERE s.breached = TRUE AND s.captured_at >= CURRENT_DATE
+      GROUP BY 1
+    `;
+    const breachMap = new Map<string, number>();
+    for (const r of breaches) breachMap.set(r.team as string, r.cnt as number);
+
+    // Team metrics with avg response/resolution times
+    const teams = await sql`
+      SELECT
+        COALESCE(assignee_team, 'unassigned') AS team,
+        COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE)::int AS opened,
+        COUNT(*) FILTER (WHERE resolved_at::date = CURRENT_DATE)::int AS resolved,
+        COUNT(*) FILTER (WHERE status NOT IN ('Resolved', 'Closed', 'Done'))::int AS backlog,
+        (AVG(EXTRACT(EPOCH FROM (first_response_at - created_at)) * 1000)
+          FILTER (WHERE first_response_at IS NOT NULL))::bigint AS avg_fr,
+        (AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000)
+          FILTER (WHERE resolved_at IS NOT NULL AND resolved_at::date = CURRENT_DATE))::bigint AS avg_res
+      FROM tickets
+      GROUP BY 1
+    `;
+
+    for (const t of teams) {
+      const team = t.team as string;
+      await sql`
+        INSERT INTO team_metrics_daily (team_name, metric_date, tickets_opened, tickets_resolved,
+          sla_breach_count, backlog_size, avg_first_response_ms, avg_resolution_ms)
+        VALUES (${team}, CURRENT_DATE, ${t.opened}, ${t.resolved},
+          ${breachMap.get(team) ?? 0}, ${t.backlog}, ${t.avg_fr}, ${t.avg_res})
+        ON CONFLICT (team_name, metric_date) DO UPDATE SET
+          tickets_opened = EXCLUDED.tickets_opened,
+          tickets_resolved = EXCLUDED.tickets_resolved,
+          sla_breach_count = EXCLUDED.sla_breach_count,
+          backlog_size = EXCLUDED.backlog_size,
+          avg_first_response_ms = EXCLUDED.avg_first_response_ms,
+          avg_resolution_ms = EXCLUDED.avg_resolution_ms
+      `;
+    }
 
     return Response.json({ ok: true, synced });
   } catch (err) {
