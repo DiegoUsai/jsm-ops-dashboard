@@ -131,7 +131,8 @@ export async function GET(req: NextRequest) {
 
     return Response.json({ ok: true, synced });
   } catch (err) {
-    console.error("Reconciliation error:", err);
-    return Response.json({ error: "Reconciliation failed" }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Reconciliation error:", msg);
+    return Response.json({ error: "Reconciliation failed", detail: msg }, { status: 500 });
   }
 }
