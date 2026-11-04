@@ -7,6 +7,10 @@ export async function GET() {
     SELECT
       COUNT(*) FILTER (WHERE created_at::date = CURRENT_DATE)::int AS opened_today,
       COUNT(*) FILTER (
+        WHERE created_at::date = CURRENT_DATE
+          AND status NOT IN ('Resolved', 'Closed', 'Done')
+      )::int AS still_open_today,
+      COUNT(*) FILTER (
         WHERE resolved_at::date = CURRENT_DATE AND created_at::date = CURRENT_DATE
       )::int AS closed_same_day,
       COUNT(*) FILTER (
@@ -15,18 +19,27 @@ export async function GET() {
     FROM tickets
   `;
 
-  const { opened_today, closed_same_day, closed_from_backlog } = rows[0];
+  const { opened_today, still_open_today, closed_same_day, closed_from_backlog } = rows[0];
 
   const openedList = await sql`
-    SELECT jira_key, summary, status, priority, organization_name, created_at
+    SELECT jira_key, summary, status, priority, organization_name, assignee_team, created_at
     FROM tickets
     WHERE created_at::date = CURRENT_DATE
     ORDER BY created_at DESC
     LIMIT 50
   `;
 
+  const stillOpenList = await sql`
+    SELECT jira_key, summary, status, priority, organization_name, assignee_team, created_at
+    FROM tickets
+    WHERE created_at::date = CURRENT_DATE
+      AND status NOT IN ('Resolved', 'Closed', 'Done')
+    ORDER BY created_at DESC
+    LIMIT 50
+  `;
+
   const closedSameDayList = await sql`
-    SELECT jira_key, summary, status, priority, organization_name, created_at, resolved_at
+    SELECT jira_key, summary, status, priority, organization_name, assignee_team, created_at, resolved_at
     FROM tickets
     WHERE resolved_at::date = CURRENT_DATE AND created_at::date = CURRENT_DATE
     ORDER BY resolved_at DESC
@@ -34,7 +47,7 @@ export async function GET() {
   `;
 
   const closedBacklogList = await sql`
-    SELECT jira_key, summary, status, priority, organization_name, created_at, resolved_at
+    SELECT jira_key, summary, status, priority, organization_name, assignee_team, created_at, resolved_at
     FROM tickets
     WHERE resolved_at::date = CURRENT_DATE AND created_at::date < CURRENT_DATE
     ORDER BY resolved_at DESC
@@ -43,9 +56,11 @@ export async function GET() {
 
   return Response.json({
     opened_today,
+    still_open_today,
     closed_same_day,
     closed_from_backlog,
     openedList,
+    stillOpenList,
     closedSameDayList,
     closedBacklogList,
   });

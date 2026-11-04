@@ -29,6 +29,8 @@ export async function GET(req: NextRequest) {
         const f = issue.fields;
         if (!f) continue;
         const reporterEmail = (f.reporter as Record<string, unknown>)?.emailAddress as string | null;
+        const assignee = f.assignee as Record<string, unknown> | null;
+        const assigneeTeam = assignee?.displayName as string | null;
         const orgId = (f.customfield_10002 as Record<string, unknown>)?.id as string | null;
         const orgName = (f.customfield_10002 as Record<string, unknown>)?.name as string | null;
         const vip = await isVip(orgId, reporterEmail);
@@ -46,7 +48,7 @@ export async function GET(req: NextRequest) {
             ${(f.status as Record<string, unknown>).name as string},
             ${(f.priority as Record<string, unknown>)?.name as string ?? null},
             ${(f.issuetype as Record<string, unknown>)?.name as string ?? null},
-            ${null},
+            ${assigneeTeam},
             ${reporterEmail ? pseudonymize(reporterEmail) : null},
             ${orgId},
             ${orgName},
@@ -61,7 +63,7 @@ export async function GET(req: NextRequest) {
             is_vip = EXCLUDED.is_vip,
             updated_at = EXCLUDED.updated_at,
             resolved_at = EXCLUDED.resolved_at,
-            assignee_team = COALESCE(tickets.assignee_team, EXCLUDED.assignee_team)
+            assignee_team = COALESCE(EXCLUDED.assignee_team, tickets.assignee_team)
         `;
         synced++;
       }

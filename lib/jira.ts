@@ -46,7 +46,7 @@ export interface JiraSearchResult {
 
 const SEARCH_FIELDS = [
   "summary", "description", "status", "priority", "issuetype", "reporter",
-  "created", "updated", "resolutiondate", "customfield_10002",
+  "assignee", "created", "updated", "resolutiondate", "customfield_10002",
 ].join(",");
 
 export async function searchJql(jql: string, nextPageToken?: string, maxResults = 100): Promise<JiraSearchResult> {

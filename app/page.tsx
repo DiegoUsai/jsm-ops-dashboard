@@ -136,12 +136,7 @@ export default function Dashboard() {
         totalBreached={data.totalBreached}
       />
 
-      {daily && (
-        <section>
-          <h2 className="text-sm font-medium text-slate-500 mb-3">Dettaglio giornaliero</h2>
-          <DailyDetail data={daily} />
-        </section>
-      )}
+      {daily && <DailyDetail data={daily} />}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section>
