@@ -8,8 +8,10 @@ interface TeamRow {
   resolved: number;
   same_day: number;
   backlog: number;
-  avg_fr: number | null;
-  avg_res: number | null;
+  avg_res_week: number | null;
+  avg_res_month: number | null;
+  avg_res_quarter: number | null;
+  avg_res_year: number | null;
 }
 
 const PERIODS = [
@@ -71,39 +73,49 @@ export function TeamMetricsTable() {
             <p className="text-sm text-slate-500">Nessuna metrica disponibile per questo periodo</p>
           </div>
         ) : (
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80">
-                <th className="text-left p-3 font-medium text-slate-500">Team</th>
-                <th className="text-right p-3 font-medium text-slate-500">Aperti</th>
-                <th className="text-right p-3 font-medium text-slate-500">Risolti</th>
-                <th className="text-right p-3 font-medium text-slate-500">Same-day</th>
-                <th className="text-right p-3 font-medium text-slate-500">Backlog</th>
-                <th className="text-right p-3 font-medium text-slate-500">Avg risposta</th>
-                <th className="text-right p-3 font-medium text-slate-500">Avg risoluzione</th>
-              </tr>
-            </thead>
-            <tbody>
-              {teams.map((m) => (
-                <tr
-                  key={m.team}
-                  className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors"
-                >
-                  <td className="p-3 font-medium text-slate-900">{m.team}</td>
-                  <td className="p-3 text-right font-mono tabular-nums">{m.opened}</td>
-                  <td className="p-3 text-right font-mono tabular-nums">{m.resolved}</td>
-                  <td className="p-3 text-right font-mono tabular-nums text-emerald-600">{m.same_day}</td>
-                  <td className="p-3 text-right font-mono tabular-nums">{m.backlog}</td>
-                  <td className="p-3 text-right font-mono tabular-nums text-slate-600">
-                    {formatMs(m.avg_fr)}
-                  </td>
-                  <td className="p-3 text-right font-mono tabular-nums text-slate-600">
-                    {formatMs(m.avg_res)}
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/80">
+                  <th className="text-left p-3 font-medium text-slate-500">Team</th>
+                  <th className="text-right p-3 font-medium text-slate-500">Aperti</th>
+                  <th className="text-right p-3 font-medium text-slate-500">Risolti</th>
+                  <th className="text-right p-3 font-medium text-slate-500">Same-day</th>
+                  <th className="text-right p-3 font-medium text-slate-500">Backlog</th>
+                  <th className="text-right p-3 font-medium text-slate-400 text-xs">Ris. sett.</th>
+                  <th className="text-right p-3 font-medium text-slate-400 text-xs">Ris. mese</th>
+                  <th className="text-right p-3 font-medium text-slate-400 text-xs">Ris. trim.</th>
+                  <th className="text-right p-3 font-medium text-slate-400 text-xs">Ris. anno</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {teams.map((m) => (
+                  <tr
+                    key={m.team}
+                    className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors"
+                  >
+                    <td className="p-3 font-medium text-slate-900">{m.team}</td>
+                    <td className="p-3 text-right font-mono tabular-nums">{m.opened}</td>
+                    <td className="p-3 text-right font-mono tabular-nums">{m.resolved}</td>
+                    <td className="p-3 text-right font-mono tabular-nums text-emerald-600">{m.same_day}</td>
+                    <td className="p-3 text-right font-mono tabular-nums">{m.backlog}</td>
+                    <td className="p-3 text-right font-mono tabular-nums text-slate-500 text-xs">
+                      {formatMs(m.avg_res_week)}
+                    </td>
+                    <td className="p-3 text-right font-mono tabular-nums text-slate-500 text-xs">
+                      {formatMs(m.avg_res_month)}
+                    </td>
+                    <td className="p-3 text-right font-mono tabular-nums text-slate-500 text-xs">
+                      {formatMs(m.avg_res_quarter)}
+                    </td>
+                    <td className="p-3 text-right font-mono tabular-nums text-slate-500 text-xs">
+                      {formatMs(m.avg_res_year)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

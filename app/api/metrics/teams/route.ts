@@ -24,12 +24,27 @@ export async function GET(req: NextRequest) {
           AND created_at::date = resolved_at::date
       )::int AS same_day,
       COUNT(*) FILTER (WHERE status NOT IN ('Resolved', 'Closed', 'Done'))::int AS backlog,
-      (AVG(EXTRACT(EPOCH FROM (first_response_at - created_at)) * 1000)
-        FILTER (WHERE first_response_at IS NOT NULL
-          AND created_at >= CURRENT_DATE - ${interval}::interval))::bigint AS avg_fr,
+
       (AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000)
         FILTER (WHERE resolved_at IS NOT NULL
-          AND resolved_at >= CURRENT_DATE - ${interval}::interval))::bigint AS avg_res
+          AND created_at >= CURRENT_DATE - '7 days'::interval
+          AND resolved_at >= CURRENT_DATE - '7 days'::interval))::bigint AS avg_res_week,
+
+      (AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000)
+        FILTER (WHERE resolved_at IS NOT NULL
+          AND created_at >= CURRENT_DATE - '1 month'::interval
+          AND resolved_at >= CURRENT_DATE - '1 month'::interval))::bigint AS avg_res_month,
+
+      (AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000)
+        FILTER (WHERE resolved_at IS NOT NULL
+          AND created_at >= CURRENT_DATE - '3 months'::interval
+          AND resolved_at >= CURRENT_DATE - '3 months'::interval))::bigint AS avg_res_quarter,
+
+      (AVG(EXTRACT(EPOCH FROM (resolved_at - created_at)) * 1000)
+        FILTER (WHERE resolved_at IS NOT NULL
+          AND created_at >= CURRENT_DATE - '1 year'::interval
+          AND resolved_at >= CURRENT_DATE - '1 year'::interval))::bigint AS avg_res_year
+
     FROM tickets
     GROUP BY 1
     HAVING
