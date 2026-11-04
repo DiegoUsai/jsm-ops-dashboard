@@ -3,10 +3,16 @@ const AUTH = () =>
   "Basic " + Buffer.from(`${process.env.JIRA_EMAIL}:${process.env.JIRA_API_TOKEN}`).toString("base64");
 
 async function jiraFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE_URL()}${path}`, {
-    ...options,
-    headers: { Authorization: AUTH(), Accept: "application/json", ...options?.headers },
-  });
+  const url = `${BASE_URL()}${path}`;
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers: { Authorization: AUTH(), Accept: "application/json", ...options?.headers },
+    });
+  } catch (err) {
+    throw new Error(`Jira fetch failed for ${url.split("?")[0]}: ${err instanceof Error ? err.message : err}`);
+  }
   if (!res.ok) throw new Error(`Jira API ${res.status}: ${await res.text()}`);
   return res.json() as Promise<T>;
 }
