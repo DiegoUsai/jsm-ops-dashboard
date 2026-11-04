@@ -11,6 +11,7 @@ interface DailyTicket {
   assignee_team: string | null;
   created_at: string;
   resolved_at?: string | null;
+  age_days?: number | null;
 }
 
 export interface DailyData {
@@ -28,7 +29,13 @@ type Tab = "opened" | "still_open" | "same_day" | "backlog";
 
 const JIRA_BASE = process.env.NEXT_PUBLIC_JIRA_BASE_URL;
 
-function TicketRow({ t }: { t: DailyTicket }) {
+function formatAge(days: number | null | undefined): string {
+  if (days == null) return "—";
+  if (days === 1) return "1 giorno";
+  return `${days} giorni`;
+}
+
+function TicketRow({ t, showAge }: { t: DailyTicket; showAge?: boolean }) {
   const link = JIRA_BASE ? `${JIRA_BASE}/browse/${t.jira_key}` : null;
   return (
     <tr className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
@@ -42,6 +49,9 @@ function TicketRow({ t }: { t: DailyTicket }) {
       <td className="p-2.5 text-sm text-slate-700 max-w-xs truncate">{t.summary}</td>
       <td className="p-2.5 text-sm text-slate-500">{t.status}</td>
       <td className="p-2.5 text-sm text-slate-500">{t.assignee_team ?? "—"}</td>
+      {showAge && (
+        <td className="p-2.5 text-sm font-mono tabular-nums text-amber-600">{formatAge(t.age_days)}</td>
+      )}
       <td className="p-2.5 text-sm text-slate-500">{t.organization_name ?? "—"}</td>
     </tr>
   );
@@ -130,11 +140,14 @@ export function DailyDetail({ data }: { data: DailyData }) {
                     <th className="text-left p-2.5 font-medium text-slate-500">Sommario</th>
                     <th className="text-left p-2.5 font-medium text-slate-500 w-32">Stato</th>
                     <th className="text-left p-2.5 font-medium text-slate-500 w-36">Assegnatario</th>
+                    {tab === "backlog" && (
+                      <th className="text-left p-2.5 font-medium text-slate-500 w-28">Età</th>
+                    )}
                     <th className="text-left p-2.5 font-medium text-slate-500 w-40">Organizzazione</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {activeList.map((t) => <TicketRow key={t.jira_key} t={t} />)}
+                  {activeList.map((t) => <TicketRow key={t.jira_key} t={t} showAge={tab === "backlog"} />)}
                 </tbody>
               </table>
             </div>

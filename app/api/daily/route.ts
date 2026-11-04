@@ -47,7 +47,8 @@ export async function GET() {
   `;
 
   const closedBacklogList = await sql`
-    SELECT jira_key, summary, status, priority, organization_name, assignee_team, created_at, resolved_at
+    SELECT jira_key, summary, status, priority, organization_name, assignee_team, created_at, resolved_at,
+      (resolved_at::date - created_at::date)::int AS age_days
     FROM tickets
     WHERE resolved_at::date = CURRENT_DATE AND created_at::date < CURRENT_DATE
     ORDER BY resolved_at DESC
