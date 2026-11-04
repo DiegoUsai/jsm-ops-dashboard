@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface DailyTicket {
   jira_key: string;
@@ -14,29 +14,40 @@ interface DailyTicket {
   age_days?: number | null;
 }
 
-export interface DailyData {
-  opened_today: number;
-  still_open_today: number;
+interface DailyResponse {
+  opened: number;
+  still_open: number;
   closed_same_day: number;
   closed_from_backlog: number;
   openedList: DailyTicket[];
   stillOpenList: DailyTicket[];
   closedSameDayList: DailyTicket[];
   closedBacklogList: DailyTicket[];
+  jiraBaseUrl: string | null;
+  period: string;
 }
 
 type Tab = "opened" | "still_open" | "same_day" | "backlog";
 
-const JIRA_BASE = process.env.NEXT_PUBLIC_JIRA_BASE_URL;
+const PERIODS = [
+  { key: "year", label: "Anno" },
+  { key: "quarter", label: "Trimestre" },
+  { key: "month", label: "Mese" },
+  { key: "week", label: "Settimana" },
+  { key: "day", label: "Oggi" },
+] as const;
+
+type Period = (typeof PERIODS)[number]["key"];
 
 function formatAge(days: number | null | undefined): string {
   if (days == null) return "—";
-  if (days === 1) return "1 giorno";
-  return `${days} giorni`;
+  if (days === 0) return "oggi";
+  if (days === 1) return "1g";
+  return `${days}g`;
 }
 
-function TicketRow({ t, showAge }: { t: DailyTicket; showAge?: boolean }) {
-  const link = JIRA_BASE ? `${JIRA_BASE}/browse/${t.jira_key}` : null;
+function TicketRow({ t, jiraBase, showAge }: { t: DailyTicket; jiraBase: string | null; showAge?: boolean }) {
+  const link = jiraBase ? `${jiraBase}/browse/${t.jira_key}` : null;
   return (
     <tr className="border-t border-slate-100 hover:bg-slate-50/50 transition-colors">
       <td className="p-2.5 text-sm font-mono">
@@ -57,9 +68,21 @@ function TicketRow({ t, showAge }: { t: DailyTicket; showAge?: boolean }) {
   );
 }
 
-export function DailyDetail({ data }: { data: DailyData }) {
-  const [open, setOpen] = useState(false);
+export function DailyDetail() {
+  const [period, setPeriod] = useState<Period>("day");
   const [tab, setTab] = useState<Tab>("opened");
+  const [data, setData] = useState<DailyResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    setLoading(true);
+    fetch(`/api/daily?period=${period}`)
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => setData(null))
+      .finally(() => setLoading(false));
+  }, [period]);
 
   const today = new Date().toLocaleDateString("it-IT", {
     weekday: "long",
@@ -68,21 +91,26 @@ export function DailyDetail({ data }: { data: DailyData }) {
     year: "numeric",
   });
 
-  const closedToday = data.closed_same_day + data.closed_from_backlog;
+  const closedTotal = (data?.closed_same_day ?? 0) + (data?.closed_from_backlog ?? 0);
+  const showAge = tab === "backlog" || tab === "still_open";
 
-  const tabs: { key: Tab; label: string; count: number; color: string }[] = [
-    { key: "opened", label: "Aperti oggi", count: data.opened_today, color: "text-blue-600" },
-    { key: "still_open", label: "Ancora aperti", count: data.still_open_today, color: "text-rose-600" },
-    { key: "same_day", label: "Chiusi (same-day)", count: data.closed_same_day, color: "text-emerald-600" },
-    { key: "backlog", label: "Chiusi (da backlog)", count: data.closed_from_backlog, color: "text-amber-600" },
-  ];
+  const tabs: { key: Tab; label: string; count: number; color: string }[] = data
+    ? [
+        { key: "opened", label: "Aperti", count: data.opened, color: "text-blue-600" },
+        { key: "still_open", label: "Ancora aperti", count: data.still_open, color: "text-rose-600" },
+        { key: "same_day", label: "Chiusi (same-day)", count: data.closed_same_day, color: "text-emerald-600" },
+        { key: "backlog", label: "Chiusi (da backlog)", count: data.closed_from_backlog, color: "text-amber-600" },
+      ]
+    : [];
 
-  const listMap: Record<Tab, DailyTicket[]> = {
-    opened: data.openedList,
-    still_open: data.stillOpenList,
-    same_day: data.closedSameDayList,
-    backlog: data.closedBacklogList,
-  };
+  const listMap: Record<Tab, DailyTicket[]> = data
+    ? {
+        opened: data.openedList,
+        still_open: data.stillOpenList,
+        same_day: data.closedSameDayList,
+        backlog: data.closedBacklogList,
+      }
+    : { opened: [], still_open: [], same_day: [], backlog: [] };
 
   const activeList = listMap[tab];
 
@@ -94,13 +122,15 @@ export function DailyDetail({ data }: { data: DailyData }) {
       >
         <div className="flex items-baseline gap-4 flex-wrap text-left">
           <span className="text-xs text-slate-400 capitalize">{today}</span>
-          <span className="text-xs text-slate-400">
-            Aperti: <span className="font-medium text-slate-600">{data.opened_today}</span>
-            {" · "}
-            Chiusi: <span className="font-medium text-slate-600">{closedToday}</span>
-            {" · "}
-            Ancora aperti: <span className="font-medium text-rose-600">{data.still_open_today}</span>
-          </span>
+          {data && (
+            <span className="text-xs text-slate-400">
+              Aperti: <span className="font-medium text-slate-600">{data.opened}</span>
+              {" · "}
+              Chiusi: <span className="font-medium text-slate-600">{closedTotal}</span>
+              {" · "}
+              Ancora aperti: <span className="font-medium text-rose-600">{data.still_open}</span>
+            </span>
+          )}
         </div>
         <svg
           className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${open ? "rotate-180" : ""}`}
@@ -113,25 +143,47 @@ export function DailyDetail({ data }: { data: DailyData }) {
       {open && (
         <>
           <div className="px-5 pb-5 border-t border-slate-100">
-            <div className="grid grid-cols-4 gap-3 mt-4">
-              {tabs.map((t) => (
+            <div className="flex items-center gap-1.5 flex-wrap mt-4 mb-4">
+              {PERIODS.map((p) => (
                 <button
-                  key={t.key}
-                  onClick={() => setTab(t.key)}
-                  className={`rounded-lg p-3 text-left transition-colors ${
-                    tab === t.key
-                      ? "bg-slate-50 ring-1 ring-slate-200"
-                      : "hover:bg-slate-50/50"
+                  key={p.key}
+                  onClick={() => setPeriod(p.key)}
+                  className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
+                    period === p.key
+                      ? "bg-slate-900 text-white"
+                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
                   }`}
                 >
-                  <p className={`text-2xl font-semibold tabular-nums ${t.color}`}>{t.count}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{t.label}</p>
+                  {p.label}
                 </button>
               ))}
             </div>
+
+            {loading ? (
+              <p className="text-sm text-slate-400 animate-pulse py-4 text-center">Caricamento…</p>
+            ) : data ? (
+              <div className="grid grid-cols-4 gap-3">
+                {tabs.map((t) => (
+                  <button
+                    key={t.key}
+                    onClick={() => setTab(t.key)}
+                    className={`rounded-lg p-3 text-left transition-colors ${
+                      tab === t.key
+                        ? "bg-slate-50 ring-1 ring-slate-200"
+                        : "hover:bg-slate-50/50"
+                    }`}
+                  >
+                    <p className={`text-2xl font-semibold tabular-nums ${t.color}`}>{t.count}</p>
+                    <p className="text-xs text-slate-500 mt-0.5">{t.label}</p>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500 py-4 text-center">Errore nel caricamento</p>
+            )}
           </div>
 
-          {activeList.length > 0 ? (
+          {!loading && data && activeList.length > 0 && (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -140,18 +192,22 @@ export function DailyDetail({ data }: { data: DailyData }) {
                     <th className="text-left p-2.5 font-medium text-slate-500">Sommario</th>
                     <th className="text-left p-2.5 font-medium text-slate-500 w-32">Stato</th>
                     <th className="text-left p-2.5 font-medium text-slate-500 w-36">Assegnatario</th>
-                    {tab === "backlog" && (
-                      <th className="text-left p-2.5 font-medium text-slate-500 w-28">Età</th>
+                    {showAge && (
+                      <th className="text-left p-2.5 font-medium text-slate-500 w-20">Età</th>
                     )}
                     <th className="text-left p-2.5 font-medium text-slate-500 w-40">Organizzazione</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {activeList.map((t) => <TicketRow key={t.jira_key} t={t} showAge={tab === "backlog"} />)}
+                  {activeList.map((t) => (
+                    <TicketRow key={t.jira_key} t={t} jiraBase={data.jiraBaseUrl} showAge={showAge} />
+                  ))}
                 </tbody>
               </table>
             </div>
-          ) : (
+          )}
+
+          {!loading && data && activeList.length === 0 && (
             <p className="p-6 text-center text-sm text-slate-400">Nessun ticket</p>
           )}
         </>

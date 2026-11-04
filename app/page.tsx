@@ -8,7 +8,6 @@ import { VolumeTrend } from "@/components/VolumeTrend";
 import { VipTickets } from "@/components/VipTickets";
 import { TeamMetricsTable } from "@/components/TeamMetrics";
 import { DailyDetail } from "@/components/DailyDetail";
-import type { DailyData } from "@/components/DailyDetail";
 import type { DashboardData, HealthStatus } from "@/lib/types";
 
 const REFRESH_MS = 5 * 60_000;
@@ -37,7 +36,6 @@ function Skeleton() {
 
 export default function Dashboard() {
   const [data, setData] = useState<DashboardData | null>(null);
-  const [daily, setDaily] = useState<DailyData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -49,17 +47,15 @@ export default function Dashboard() {
       if (!silent) setLoading(true);
       else setRefreshing(true);
 
-      const [slaRes, metricsRes, vipRes, dailyRes] = await Promise.all([
+      const [slaRes, metricsRes, vipRes] = await Promise.all([
         fetch("/api/sla?status=open"),
         fetch("/api/metrics?days=30"),
         fetch("/api/tickets?vip=true&limit=20"),
-        fetch("/api/daily"),
       ]);
 
       const slaData = await slaRes.json();
       const metricsData = await metricsRes.json();
       const vipData = await vipRes.json();
-      const dailyData = await dailyRes.json();
 
       const totalOpen = slaData.totalOpen ?? 0;
       const totalBreached = slaData.totalBreached ?? 0;
@@ -78,7 +74,6 @@ export default function Dashboard() {
         totalBreached,
         slaCompliancePercent,
       });
-      setDaily(dailyData);
       setLastUpdated(new Date());
       setError(null);
     } catch (err) {
@@ -135,7 +130,7 @@ export default function Dashboard() {
         totalBreached={data.totalBreached}
       />
 
-      {daily && <DailyDetail data={daily} />}
+      <DailyDetail />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <section>
