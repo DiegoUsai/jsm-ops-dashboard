@@ -74,7 +74,6 @@ export default function Dashboard() {
         ),
         backlogAging: metricsData.backlogAging ?? [],
         volumeTrend: metricsData.volumeTrend ?? [],
-        teamMetrics: metricsData.metrics ?? [],
         totalOpen,
         totalBreached,
         slaCompliancePercent,
@@ -152,7 +151,7 @@ export default function Dashboard() {
 
       <section>
         <h2 className="text-sm font-medium text-slate-500 mb-3">Metriche per team</h2>
-        <TeamMetricsTable data={data.teamMetrics} />
+        <TeamMetricsTable />
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

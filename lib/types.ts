@@ -66,7 +66,6 @@ export interface DashboardData {
   vipOpen: Ticket[];
   backlogAging: { bucket: string; count: number }[];
   volumeTrend: { date: string; opened: number; resolved: number }[];
-  teamMetrics: TeamMetrics[];
   totalOpen: number;
   totalBreached: number;
   slaCompliancePercent: number;
